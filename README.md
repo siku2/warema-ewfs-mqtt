@@ -13,7 +13,7 @@ Currently only the [ESP32](https://www.espressif.com/en/products/socs/esp32/over
 ## Quickstart
 
 First you need to set up the controller.
-To do this follow the instructions on the [Wiring Wiki](wiki/Wiring) page to hook up your transmitter.
+To do this follow the instructions on the [Wiring Wiki](https://github.com/siku2/warema-ewfs-mqtt/wiki/Wiring) page to hook up your transmitter.
 Connect the transistor bases for the buttons to the pins according to the following table:
 
 | Button   | Pin |
@@ -29,7 +29,7 @@ Don't forget to connect the power to the transmitter board using the *3v3* and *
 
 Adjust the configuration in the [platformio.ini](platformio.ini).
 All configuration is hard-coded into the program when building it.
-There are more values that can be configured. Refer to the [Configuration Wiki](wiki/Configuration) page for more information.
+There are more values that can be configured. Refer to the [Configuration Wiki](https://github.com/siku2/warema-ewfs-mqtt/wiki/Configuration) page for more information.
 
 Build and upload the program to your microcontroller and you're ready to go.
 
@@ -37,4 +37,4 @@ It's recommended that you open the serial monitor the first time to check whethe
 
 ## Documentation
 
-Check out the [Wiki](wiki) for the documentation.
+Check out the [Wiki](https://github.com/siku2/warema-ewfs-mqtt/wiki) for the documentation.
