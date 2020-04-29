@@ -1,6 +1,10 @@
 # WAREMA EWFS MQTT
 
 Library for controlling a zombified EWFS controller over [MQTT](http://mqtt.org/).
+To be a bit more specific: I was unable to reliably control the WAREMA EWFS shutters using RF signals.
+This was most likely due to the receiver and transmitter that I was using but instead of spending more time on it I decided to instead abuse a real EWFS remote control to do the job for me.
+So here we are, this is the software for controlling this abomination.
+
 This project uses [PlatformIO](https://platformio.org/).
 It's not strictly required that you use it but it will make your life a whole lot easier.
 
