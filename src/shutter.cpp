@@ -8,15 +8,15 @@
 
 #define chrono_ms std::chrono::milliseconds
 
-const chrono_ms PRESS_DURATION(30);
-const chrono_ms RECOVERY_DURATION(30);
+const chrono_ms PRESS_DURATION(100);
+const chrono_ms RECOVERY_DURATION(100);
 
 const chrono_ms SEND_DURATION(1600);
 const chrono_ms SEND_PAUSE_DURATION(750);
 const uint SEND_CMD_COUNT = 3;
 
-const chrono_ms SHUTTER_DISPLAY_ON_MIN(2500);
-const chrono_ms SHUTTER_DISPLAY_OFF_MAX(3500);
+const chrono_ms SHUTTER_DISPLAY_ON_MIN(2000);
+const chrono_ms SHUTTER_DISPLAY_OFF_MAX(4000);
 
 const chrono_ms MIN_SLEEP_FOR_UNLOCK(10000);
 const chrono_ms EARLY_WAKEUP_FOR_LOCK(3500);
