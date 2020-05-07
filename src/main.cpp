@@ -1,5 +1,8 @@
 #include <thread>
 
+#include <esp_err.h>
+#include <esp_pthread.h>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
@@ -66,24 +69,17 @@ shutter::Controller *get_controller(ShutterIndex shutter)
   for (auto &c : CONTROLLERS)
   {
     total += c.total_shutters();
-    if (shutter > total)
+    if (shutter < total)
       return &c;
   }
 
   throw std::invalid_argument("no such shutter");
 }
 
-void on_mqtt_message(char *topic, byte *payload, unsigned int length)
-{
-  StaticJsonDocument<256> doc;
-  const auto err = deserializeJson(doc, payload, length);
-  if (err)
-  {
-    Serial.print("failed to deserialize message: ");
-    Serial.println(err.c_str());
-    return;
-  }
+#define StaticMQTTJsonDocument StaticJsonDocument<256>
 
+void handle_command(StaticMQTTJsonDocument doc)
+{
   const char *op = doc["op"];
   const uint8_t shutter = doc["shutter"];
   Serial.printf("OP: %s | SHUTTER: %u\n", op, shutter);
@@ -119,15 +115,49 @@ void on_mqtt_message(char *topic, byte *payload, unsigned int length)
   Serial.println();
 }
 
+void on_mqtt_message(char *topic, byte *payload, unsigned int length)
+{
+  StaticMQTTJsonDocument doc;
+  const auto err = deserializeJson(doc, payload, length);
+  if (err)
+  {
+    Serial.print("failed to deserialize message: ");
+    Serial.println(err.c_str());
+    return;
+  }
+
+  std::thread(handle_command, doc).detach();
+}
+
+void panic(std::string msg)
+{
+  Serial.print("PANIC: ");
+  Serial.println(msg.c_str());
+  abort();
+}
+
+void set_thread_config()
+{
+  esp_pthread_cfg_t cfg;
+  cfg.stack_size = (4 * 1024);
+  cfg.inherit_cfg = true;
+  if (esp_pthread_set_cfg(&cfg) != ESP_OK)
+  {
+    panic("failed to set pthread config");
+  }
+}
+
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println();
-
   for (auto &c : CONTROLLERS)
   {
     c.setup();
   }
+
+  Serial.begin(9600);
+  Serial.println();
+
+  set_thread_config();
 
   g_mqtt_client.setServer(MQTT_SERVER_DOMAIN, MQTT_SERVER_PORT);
   g_mqtt_client.setCallback(on_mqtt_message);

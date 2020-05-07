@@ -81,7 +81,7 @@ namespace shutter
 
         std::mutex m_controller_lock;
         ShutterIndex m_selected_shutter;
-        uint32_t m_last_selection_active_at;
+        unsigned long m_last_selection_active_at;
 
         void _select_previous_shutter()
         {
@@ -139,8 +139,6 @@ namespace shutter
                 else
                     _select_previous_shutter();
             }
-
-            Serial.printf("[DEBUG] selected shutter: %d", m_selected_shutter);
         }
 
         void _press_up(ShutterIndex shutter, uint count)
