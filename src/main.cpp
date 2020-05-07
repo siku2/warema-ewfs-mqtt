@@ -5,28 +5,12 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-#include <shutter.hpp>
+#include <config.hpp>
 
-#if !(defined(WIFI_SSID) && defined(WIFI_PASSWORD))
-#error WIFI_SSID and WIFI_PASSWORD must be defined
-#endif
+WiFiClient g_wifi_client;
+PubSubClient g_mqtt_client(g_wifi_client);
 
-#ifndef MQTT_CLIENT_ID
-#define MQTT_CLIENT_ID "shutter-control"
-#endif
-
-#ifndef MQTT_SERVER_DOMAIN
-#define MQTT_SERVER_DOMAIN "localhost"
-#endif
-
-#ifndef MQTT_SERVER_PORT
-#define MQTT_SERVER_PORT 1883
-#endif
-
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
-
-void connectWifi()
+void connect_wifi()
 {
   Serial.println();
   Serial.print("Connecting to ");
@@ -48,22 +32,22 @@ void connectWifi()
   Serial.println(WiFi.localIP());
 }
 
-void mqttSubscribe()
+void mqtt_subscribe()
 {
   Serial.println("Subscribing to MQTT topics");
-  mqttClient.subscribe("ewfs/command");
+  g_mqtt_client.subscribe("ewfs/command");
 }
 
-void connectMQTT()
+void connect_mqtt()
 {
   Serial.println("Connecting to MQTT");
-  if (!mqttClient.connect(MQTT_CLIENT_ID))
+  if (!g_mqtt_client.connect(MQTT_CLIENT_ID))
     return;
 
-  mqttSubscribe();
+  mqtt_subscribe();
 }
 
-void publishShutterState(uint8_t shutter, String state)
+void publish_shutter_state(uint8_t shutter, String state)
 {
   StaticJsonDocument<256> doc;
   doc["assumed_state"] = state;
@@ -73,10 +57,23 @@ void publishShutterState(uint8_t shutter, String state)
 
   char topicBuf[32];
   sprintf(topicBuf, "ewfs/shutters/%u", shutter);
-  mqttClient.publish(topicBuf, buf, n);
+  g_mqtt_client.publish(topicBuf, buf, n);
 }
 
-void onMQTTMessage(char *topic, byte *payload, unsigned int length)
+shutter::Controller *get_controller(ShutterIndex shutter)
+{
+  uint total = 0;
+  for (auto &c : CONTROLLERS)
+  {
+    total += c.total_shutters();
+    if (shutter > total)
+      return &c;
+  }
+
+  throw std::invalid_argument("no such shutter");
+}
+
+void on_mqtt_message(char *topic, byte *payload, unsigned int length)
 {
   StaticJsonDocument<256> doc;
   const auto err = deserializeJson(doc, payload, length);
@@ -91,7 +88,12 @@ void onMQTTMessage(char *topic, byte *payload, unsigned int length)
   const uint8_t shutter = doc["shutter"];
   Serial.printf("OP: %s | SHUTTER: %u\n", op, shutter);
 
-  if (shutter >= TOTAL_SHUTTERS)
+  shutter::Controller *controller;
+  try
+  {
+    controller = get_controller(shutter);
+  }
+  catch (const std::invalid_argument &e)
   {
     Serial.print("invalid shutter: ");
     Serial.println(shutter);
@@ -100,13 +102,13 @@ void onMQTTMessage(char *topic, byte *payload, unsigned int length)
 
   if (strcmp(op, "shutter_up") == 0)
   {
-    std::thread(shutterUp, shutter).detach();
-    publishShutterState(shutter, "up");
+    controller->roll_up(shutter);
+    publish_shutter_state(shutter, "up");
   }
   else if (strcmp(op, "shutter_down") == 0)
   {
-    std::thread(shutterDown, shutter).detach();
-    publishShutterState(shutter, "down");
+    controller->roll_down(shutter);
+    publish_shutter_state(shutter, "down");
   }
   else
   {
@@ -122,10 +124,13 @@ void setup()
   Serial.begin(9600);
   Serial.println();
 
-  setupPins();
+  for (auto &c : CONTROLLERS)
+  {
+    c.setup();
+  }
 
-  mqttClient.setServer(MQTT_SERVER_DOMAIN, MQTT_SERVER_PORT);
-  mqttClient.setCallback(onMQTTMessage);
+  g_mqtt_client.setServer(MQTT_SERVER_DOMAIN, MQTT_SERVER_PORT);
+  g_mqtt_client.setCallback(on_mqtt_message);
 
   Serial.println("\nready");
 }
@@ -134,13 +139,13 @@ void loop()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    connectWifi();
+    connect_wifi();
     return;
   }
 
-  if (!mqttClient.loop())
+  if (!g_mqtt_client.loop())
   {
-    connectMQTT();
+    connect_mqtt();
     return;
   }
 }
