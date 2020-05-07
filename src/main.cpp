@@ -78,6 +78,11 @@ shutter::Controller *get_controller(ShutterIndex shutter)
 
 #define StaticMQTTJsonDocument StaticJsonDocument<256>
 
+chrono_ms double_seconds_to_chrono_ms(double secs)
+{
+  return chrono_ms((int)(1000 * secs));
+}
+
 void handle_command(StaticMQTTJsonDocument doc)
 {
   const char *op = doc["op"];
@@ -96,23 +101,52 @@ void handle_command(StaticMQTTJsonDocument doc)
     return;
   }
 
+  if (strcmp(op, "shutter_stop") == 0)
+  {
+    controller->roll_stop(shutter);
+    return;
+  }
+
+  bool roll_up;
   if (strcmp(op, "shutter_up") == 0)
-  {
-    controller->roll_up(shutter);
-    publish_shutter_state(shutter, "up");
-  }
+    roll_up = true;
   else if (strcmp(op, "shutter_down") == 0)
-  {
-    controller->roll_down(shutter);
-    publish_shutter_state(shutter, "down");
-  }
+    roll_up = false;
   else
   {
     Serial.print("received unknown operation: ");
     Serial.println(op);
+    return;
   }
 
-  Serial.println();
+  const char *mode = doc["mode"] | "default";
+  if (strcmp(mode, "absolute") == 0)
+  {
+    const auto time = double_seconds_to_chrono_ms(doc["time"]);
+    const auto total_time = double_seconds_to_chrono_ms(doc["total_time"] | DEFAULT_TOTAL_TIME);
+    const shutter::ShutterProfile profile{shutter, total_time};
+
+    if (roll_up)
+      controller->roll_from_bottom(profile, time);
+    else
+      controller->roll_from_top(profile, time);
+  }
+  else if (strcmp(mode, "relative") == 0)
+  {
+    const auto time = double_seconds_to_chrono_ms(doc["time"] | DEFAULT_RELATIVE_TIME);
+
+    if (roll_up)
+      controller->roll_up(shutter, time);
+    else
+      controller->roll_down(shutter, time);
+  }
+  else
+  {
+    if (roll_up)
+      controller->roll_up(shutter);
+    else
+      controller->roll_down(shutter);
+  }
 }
 
 void on_mqtt_message(char *topic, byte *payload, unsigned int length)

@@ -9,6 +9,7 @@ namespace shutter
 {
 #define ShutterIndex uint8_t
 #define chrono_ms std::chrono::milliseconds
+#define time_now std::chrono::system_clock::now
 
     class ControllerProfile
     {
@@ -31,7 +32,7 @@ namespace shutter
             : shutters(shutters),
               select_duration(select), select_recovery_duration(select),
               send_duration(1600), send_recovery_duration(750),
-              send_count(3),
+              send_count(2),
               selection_active_duration_min(active_min), selection_active_duration_max(active_max){};
     };
 
@@ -162,22 +163,25 @@ namespace shutter
             m_last_selection_active_at = millis();
         }
 
-        void _sleep(chrono_ms timeout)
+        template <typename T>
+        void _sleep_until(T s)
         {
-            const chrono_ms MIN_SLEEP_FOR_UNLOCK(10000);
-            const chrono_ms EARLY_WAKEUP_FOR_LOCK(3500);
+            const chrono_ms MIN_SLEEP_FOR_UNLOCK(15000);
+            const chrono_ms EARLY_WAKEUP_FOR_LOCK(4000);
 
+            auto timeout = s - time_now();
             if (timeout < MIN_SLEEP_FOR_UNLOCK)
             {
-                std::this_thread::sleep_for(timeout);
+                std::this_thread::sleep_until(s);
                 return;
             }
 
-            auto wakeup_at = std::chrono::system_clock::now() + timeout;
+            Serial.println("[smart lock] unlocking");
             m_controller_lock.unlock();
             std::this_thread::sleep_for(timeout - EARLY_WAKEUP_FOR_LOCK);
+            Serial.println("[smart lock] reacquiring lock");
             m_controller_lock.lock();
-            std::this_thread::sleep_until(wakeup_at);
+            std::this_thread::sleep_until(s);
         }
 
     public:
@@ -214,32 +218,67 @@ namespace shutter
             _press_up(shutter, m_profile.send_count);
         }
 
+        void roll_up(ShutterIndex shutter, chrono_ms time)
+        {
+            std::lock_guard<std::mutex> guard(m_controller_lock);
+            auto sleep_until = time_now() + time;
+            _press_up(shutter, m_profile.send_count);
+            _sleep_until(sleep_until);
+            _press_stop(shutter, m_profile.send_count);
+        }
+
+        void roll_stop(ShutterIndex shutter)
+        {
+            std::lock_guard<std::mutex> guard(m_controller_lock);
+            _press_stop(shutter, m_profile.send_count);
+        }
+
         void roll_down(ShutterIndex shutter)
         {
             std::lock_guard<std::mutex> guard(m_controller_lock);
             _press_down(shutter, m_profile.send_count);
         }
 
+        void roll_down(ShutterIndex shutter, chrono_ms time)
+        {
+            std::lock_guard<std::mutex> guard(m_controller_lock);
+            auto sleep_until = time_now() + time;
+            _press_down(shutter, m_profile.send_count);
+            _sleep_until(sleep_until);
+            _press_stop(shutter, m_profile.send_count);
+        }
+
         void roll_from_top(ShutterProfile shutter, chrono_ms time)
         {
             roll_up(shutter.index);
             std::this_thread::sleep_for(shutter.total_time);
-
-            std::lock_guard<std::mutex> guard(m_controller_lock);
-            _press_down(shutter.index, m_profile.send_count);
-            _sleep(time);
-            _press_stop(shutter.index, m_profile.send_count);
+            roll_down(shutter.index, time);
         }
 
         void roll_from_bottom(ShutterProfile shutter, chrono_ms time)
         {
             roll_down(shutter.index);
             std::this_thread::sleep_for(shutter.total_time);
+            roll_up(shutter.index, time);
+        }
 
-            std::lock_guard<std::mutex> guard(m_controller_lock);
-            _press_up(shutter.index, m_profile.send_count);
-            _sleep(time);
-            _press_stop(shutter.index, m_profile.send_count);
+        void roll_to(ShutterProfile shutter, double percentage)
+        {
+            if (percentage < 0.0 || percentage > 1.0)
+                return;
+
+            auto from_top = true;
+            if (percentage > 0.5)
+            {
+                from_top = false;
+                percentage = 1.0 - percentage;
+            }
+
+            auto time = std::chrono::duration_cast<chrono_ms>(percentage * shutter.total_time);
+            if (from_top)
+                roll_from_top(shutter, time);
+            else
+                roll_from_bottom(shutter, time);
         }
     };
 } // namespace shutter
