@@ -1,7 +1,11 @@
 #include <config_profiles.hpp>
 
+// This file contains the configuration.
+// You can find a documentation here:
+// https://github.com/siku2/warema-ewfs-mqtt/wiki/Configuration
+
 #define WIFI_SSID "Your WiFi SSID"
-#define WIFI_PASSWORD "Your Wifi Password"
+#define WIFI_PASSWORD "Your Wifi password"
 
 #define MQTT_SERVER_DOMAIN "localhost"
 #define MQTT_SERVER_PORT 1883

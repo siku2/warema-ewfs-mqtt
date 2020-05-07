@@ -12,16 +12,11 @@ Currently only the [ESP32](https://www.espressif.com/en/products/socs/esp32/over
 
 ## Quickstart
 
-First you need to set up the controller.
-To do this follow the instructions on the [Wiring Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/Wiring) to hook up your transmitter.
+You can find out how to prepare your transmitter on the [Wiring Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/Wiring).
 
-Next, follow the instructions on the [Configuration Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/Configuration) to configure the program.
+The [Configuration Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/Configuration) goes over how to configure the code.
 
-Build and upload the program to your microcontroller and you're ready to go.
-
-It's recommended that you open the serial monitor the first time to check whether it's connecting to the network and to the MQTT broker.
-
-Refer to the [MQTT Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/MQTT) to find out how to control it.
+Documentation for the usage can be found on the [MQTT Wiki page](https://github.com/siku2/warema-ewfs-mqtt/wiki/MQTT).
 
 ## Documentation
 
