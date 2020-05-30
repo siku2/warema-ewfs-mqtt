@@ -160,7 +160,16 @@ void on_mqtt_message(char *topic, byte *payload, unsigned int length)
     return;
   }
 
-  std::thread(handle_command, doc).detach();
+  try
+  {
+    std::thread(handle_command, doc).detach();
+  }
+  catch (const std::exception &e)
+  {
+    Serial.print("failed to handle command: ");
+    Serial.println(e.what());
+    return;
+  }
 }
 
 void panic(std::string msg)

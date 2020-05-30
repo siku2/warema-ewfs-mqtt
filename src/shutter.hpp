@@ -31,7 +31,7 @@ namespace shutter
                           chrono_ms active_min, chrono_ms active_max)
             : shutters(shutters),
               select_duration(select), select_recovery_duration(select),
-              send_duration(1600), send_recovery_duration(750),
+              send_duration(2500), send_recovery_duration(750),
               send_count(2),
               selection_active_duration_min(active_min), selection_active_duration_max(active_max){};
     };
