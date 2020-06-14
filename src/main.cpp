@@ -8,7 +8,10 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+#include <led.hpp>
 #include <config.hpp>
+
+#define WIFI_CONNECTION_TIMEOUT_MS 5000
 
 WiFiClient g_wifi_client;
 PubSubClient g_mqtt_client(g_wifi_client);
@@ -20,11 +23,18 @@ void connect_wifi()
   Serial.println(WIFI_SSID);
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  unsigned long begin_connect_ms = millis();
 
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(500);
     Serial.print(".");
+    led::flash_blocking(250);
+    if (millis() - begin_connect_ms > WIFI_CONNECTION_TIMEOUT_MS)
+    {
+      Serial.println(" TIMEOUT");
+      led::flash_err();
+      return;
+    }
   }
 
   randomSeed(micros());
@@ -33,6 +43,7 @@ void connect_wifi()
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  led::flash_ok();
 }
 
 void mqtt_subscribe()
@@ -45,9 +56,13 @@ void connect_mqtt()
 {
   Serial.println("Connecting to MQTT");
   if (!g_mqtt_client.connect(MQTT_CLIENT_ID))
+  {
+    led::flash_err();
     return;
+  }
 
   mqtt_subscribe();
+  led::flash_ok();
 }
 
 void publish_shutter_state(uint8_t shutter, String state)
@@ -192,6 +207,8 @@ void set_thread_config()
 
 void setup()
 {
+  led::setup();
+
   for (auto &c : CONTROLLERS)
   {
     c.setup();
@@ -206,6 +223,7 @@ void setup()
   g_mqtt_client.setCallback(on_mqtt_message);
 
   Serial.println("\nready");
+  led::flash_ok();
 }
 
 void loop()
