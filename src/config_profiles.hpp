@@ -20,8 +20,8 @@
 //   The 3rd argument should be lower than the lowest value you recorded (doesn't hurt if it's way too low)
 //   and the 4th argument should be bigger than the highest value.
 //
-//   For testing purposes you can set the 3rd argument to 0 and the 4th to something high like 5000ms.
+//   For testing purposes you can set the 3rd argument to 0 and the 4th to something high like 10000ms.
 //   However please note that the 3rd value shouldn't remain 0 as it would drastically slow down the shutter selection.
 shutter::ControllerProfile
-    PROFILE_TIMER_8K((ShutterIndex)8, chrono_ms(30), chrono_ms(2000), chrono_ms(4500)),
-    PROFILE_HANDHELD_TRANSMITTER((ShutterIndex)8, chrono_ms(100), chrono_ms(2000), chrono_ms(4500));
+    PROFILE_TIMER_8K((ShutterIndex)8, chrono_ms(50), chrono_ms(2000), chrono_ms(5000)),
+    PROFILE_HANDHELD_TRANSMITTER((ShutterIndex)8, chrono_ms(200), chrono_ms(2000), chrono_ms(5000));

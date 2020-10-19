@@ -13,6 +13,11 @@
 
 #define WIFI_CONNECTION_TIMEOUT_MS 5000
 
+// #define TESTING
+#ifdef TESTING
+#include <test.hpp>
+#endif
+
 WiFiClient g_wifi_client;
 PubSubClient g_mqtt_client(g_wifi_client);
 
@@ -22,6 +27,8 @@ void connect_wifi()
   Serial.print("Connecting to ");
   Serial.println(WIFI_SSID);
 
+  WiFi.disconnect();
+  delay(1000);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   unsigned long begin_connect_ms = millis();
 
@@ -78,14 +85,18 @@ void publish_shutter_state(uint8_t shutter, String state)
   g_mqtt_client.publish(topicBuf, buf, n);
 }
 
-shutter::Controller *get_controller(ShutterIndex shutter)
+shutter::Controller *get_controller(ShutterIndex *shutter)
 {
-  uint total = 0;
+  uint start_index = 0;
   for (auto &c : CONTROLLERS)
   {
-    total += c.total_shutters();
-    if (shutter < total)
+    auto end_index = start_index + c.total_shutters();
+    if (*shutter < end_index)
+    {
+      *shutter = *shutter - start_index;
       return &c;
+    }
+    start_index = end_index;
   }
 
   throw std::invalid_argument("no such shutter");
@@ -101,13 +112,13 @@ chrono_ms double_seconds_to_chrono_ms(double secs)
 void handle_command(StaticMQTTJsonDocument doc)
 {
   const char *op = doc["op"];
-  const uint8_t shutter = doc["shutter"];
+  uint8_t shutter = doc["shutter"];
   Serial.printf("OP: %s | SHUTTER: %u\n", op, shutter);
 
   shutter::Controller *controller;
   try
   {
-    controller = get_controller(shutter);
+    controller = get_controller(&shutter);
   }
   catch (const std::invalid_argument &e)
   {
@@ -197,7 +208,7 @@ void panic(std::string msg)
 void set_thread_config()
 {
   esp_pthread_cfg_t cfg;
-  cfg.stack_size = (4 * 1024);
+  cfg.stack_size = (8 * 1024);
   cfg.inherit_cfg = true;
   if (esp_pthread_set_cfg(&cfg) != ESP_OK)
   {
@@ -224,6 +235,10 @@ void setup()
 
   Serial.println("\nready");
   led::flash_ok();
+
+#ifdef TESTING
+  test();
+#endif
 }
 
 void loop()

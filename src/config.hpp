@@ -29,5 +29,7 @@ shutter::Controller CONTROLLERS[] = {
     {PROFILE_HANDHELD_TRANSMITTER, 13, 12, 14, 0, 15},
 };
 
+// Default time in seconds it takes for a shutter to roll down or up completely
 #define DEFAULT_TOTAL_TIME 30.0
+// Default time to roll in relative mode if the duration wasn't specified
 #define DEFAULT_RELATIVE_TIME 10.0
