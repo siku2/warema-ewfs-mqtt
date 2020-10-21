@@ -112,6 +112,7 @@ namespace shutter
             // this doesn't change the selection, it only makes it active.
             m_next.press(m_profile.select_duration);
             m_last_selection_active_at = millis();
+            std::this_thread::sleep_for(m_profile.select_recovery_duration);
         }
 
         void _select_shutter(ShutterIndex shutter)
@@ -134,11 +135,12 @@ namespace shutter
 
             for (auto i = 0; i < steps; i++)
             {
-                std::this_thread::sleep_for(m_profile.select_recovery_duration);
                 if (forwards)
                     _select_next_shutter();
                 else
                     _select_previous_shutter();
+
+                std::this_thread::sleep_for(m_profile.select_recovery_duration);
             }
         }
 

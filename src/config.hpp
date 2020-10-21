@@ -26,7 +26,7 @@
 // i.e. if the first controller has 8 shutters the first shutter of the second controller has index 8.
 shutter::Controller CONTROLLERS[] = {
     {PROFILE_TIMER_8K, 26, 25, 33, 22, 23},
-    {PROFILE_HANDHELD_TRANSMITTER, 13, 12, 14, 0, 15},
+    {PROFILE_HANDHELD_TRANSMITTER, 13, 12, 14, 27, 15},
 };
 
 // Default time in seconds it takes for a shutter to roll down or up completely
