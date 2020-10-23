@@ -131,6 +131,7 @@ namespace shutter
                 steps = TOTAL_SHUTTERS - steps;
             }
 
+            std::this_thread::sleep_for(m_profile.select_recovery_duration);
             _ensure_selection_active();
 
             for (auto i = 0; i < steps; i++)
