@@ -12,6 +12,9 @@
 // Client id used to communicate with the MQTT server
 #define MQTT_CLIENT_ID "shutter-control"
 
+#define EEPROM_SELECTION_ADDRESS 0x00
+#define EEPROM_SELECTION_SIZE 8
+
 // This is the list of controllers which are attached to the board.
 // A controller is defined by a profile followed by the pins
 // controlling the buttons in the following order:

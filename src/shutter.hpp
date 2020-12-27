@@ -210,7 +210,17 @@ namespace shutter
             }
         }
 
-        uint total_shutters()
+        ShutterIndex get_selected_shutter() const
+        {
+            return m_selected_shutter;
+        }
+
+        void set_shutter_index_no_select(ShutterIndex shutter)
+        {
+            m_selected_shutter = shutter;
+        }
+
+        uint total_shutters() const
         {
             return m_profile.shutters;
         }

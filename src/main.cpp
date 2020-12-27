@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <EEPROM.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 
@@ -20,6 +21,41 @@
 
 WiFiClient g_wifi_client;
 PubSubClient g_mqtt_client(g_wifi_client);
+
+void publish_controller_selections()
+{
+  size_t icontroller = 0;
+  for (auto &c : CONTROLLERS)
+  {
+    char value_buf[8];
+    itoa(c.get_selected_shutter(), value_buf, 10);
+
+    char topic_buf[32];
+    sprintf(topic_buf, "ewfs/controllers/%u", icontroller++);
+    g_mqtt_client.publish(topic_buf, value_buf, true);
+  }
+}
+
+void load_controller_selections()
+{
+  size_t address = EEPROM_SELECTION_ADDRESS;
+  for (auto &c : CONTROLLERS)
+  {
+    const auto value = EEPROM.read(address++);
+    if (value != 0xFF)
+      c.set_shutter_index_no_select(value);
+  }
+}
+
+void update_controller_selections()
+{
+  size_t address = EEPROM_SELECTION_ADDRESS;
+  for (auto &c : CONTROLLERS)
+    EEPROM.write(address++, c.get_selected_shutter());
+
+  EEPROM.commit();
+  publish_controller_selections();
+}
 
 void connect_wifi()
 {
@@ -62,13 +98,16 @@ void mqtt_subscribe()
 void connect_mqtt()
 {
   Serial.println("Connecting to MQTT");
-  if (!g_mqtt_client.connect(MQTT_CLIENT_ID))
+  if (!g_mqtt_client.connect(MQTT_CLIENT_ID, "ewfs/status", 0, true, "offline"))
   {
     led::flash_err();
     return;
   }
 
   mqtt_subscribe();
+  g_mqtt_client.publish("ewfs/status", "online", true);
+  publish_controller_selections();
+
   led::flash_ok();
 }
 
@@ -130,6 +169,7 @@ void handle_command(StaticMQTTJsonDocument doc)
   if (strcmp(op, "shutter_stop") == 0)
   {
     controller->roll_stop(shutter);
+    update_controller_selections();
     return;
   }
 
@@ -173,6 +213,7 @@ void handle_command(StaticMQTTJsonDocument doc)
     else
       controller->roll_down(shutter);
   }
+  update_controller_selections();
 }
 
 void on_mqtt_message(char *topic, byte *payload, unsigned int length)
@@ -207,9 +248,7 @@ void panic(std::string msg)
 
 void set_thread_config()
 {
-  esp_pthread_cfg_t cfg;
-  cfg.stack_size = (8 * 1024);
-  cfg.inherit_cfg = true;
+  esp_pthread_cfg_t cfg{8 * 1024, 0, true};
   if (esp_pthread_set_cfg(&cfg) != ESP_OK)
   {
     panic("failed to set pthread config");
@@ -218,12 +257,16 @@ void set_thread_config()
 
 void setup()
 {
+  EEPROM.begin(EEPROM_SELECTION_SIZE);
+
   led::setup();
 
   for (auto &c : CONTROLLERS)
   {
     c.setup();
   }
+
+  load_controller_selections();
 
   Serial.begin(9600);
   Serial.println();
